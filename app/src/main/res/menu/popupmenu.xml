@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:title="Mark In time"
+        android:id="@+id/filterIn"/>
+    <item
+        android:title="Mark Out time"
+        android:id="@+id/filterOut"/>
+    <item
+        android:title="Mark Short Leave"
+        android:id="@+id/filterShortleave"/>
+    <item
+        android:title="Employee"
+        android:id="@+id/filterEmployee"/>
+
+
+</menu>
