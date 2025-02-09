@@ -156,6 +156,16 @@
         android:textColor="@color/purple"
         android:layout_margin="20dp"
         />
+            <androidx.appcompat.widget.AppCompatButton
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="next"
+                android:background="@drawable/backbtn"
+                android:textSize="20dp"
+                android:id="@+id/btnnext"
+                android:textColor="@color/purple"
+                android:layout_margin="20dp"
+                />
             <View
                 android:layout_width="match_parent"
                 android:layout_height="100dp"/>

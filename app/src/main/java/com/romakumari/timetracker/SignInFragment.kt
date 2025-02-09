@@ -56,8 +56,8 @@ class SignInFragment : Fragment() {
         }
 
         binding.btnlogin.setOnClickListener {
-            val  adminusername="Admin "
-            val  password="12345"
+            val adminusername = "Admin "
+            val password = "12345"
             // Check if the username is empty
             if (binding.etUsername.text.toString().isNullOrEmpty()) {
                 binding.etUsername.error = "Enter Your User Name"

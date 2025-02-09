@@ -3,7 +3,15 @@ package com.romakumari.timetracker
 import android.app.AlertDialog
 import android.app.Dialog
 import android.app.TimePickerDialog
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
 import android.view.Gravity
 import androidx.fragment.app.Fragment
@@ -16,12 +24,18 @@ import android.widget.PopupMenu
 import android.widget.SearchView
 import android.widget.TimePicker
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.firestore.FirebaseFirestore
 import com.romakumari.timetracker.databinding.EmployefilterBinding
 import com.romakumari.timetracker.databinding.FragmentAdminBinding
 import com.romakumari.timetracker.databinding.ItemadminlayoutBinding
+import com.romakumari.timetracker.databinding.ItememployeelayoutBinding
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
@@ -41,13 +55,16 @@ class AdminFragment : Fragment(),AdminIterface {
     var db = FirebaseFirestore.getInstance()
     lateinit var adapter: AdminRecyclerAdapter
     lateinit var linearLayoutManager: LinearLayoutManager
-    var employeelist = arrayListOf<EmployeeDataClass>()
+    var employeelist = mutableListOf<EmployeeDataClass>()
     var filterList = arrayListOf<EmployeeDataClass>()
-
+    val REQUEST_CODE_PERMISSIONS = 1001
     // TODO: Rename and change types of parameters
     private var param1: String? = null
     private var param2: String? = null
     var filterEmp = ""
+    var filerin = ""
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mainActivity = activity as MainActivity
@@ -64,24 +81,44 @@ class AdminFragment : Fragment(),AdminIterface {
         // Inflate the layout for this fragment
         binding = FragmentAdminBinding.inflate(layoutInflater)
         return binding.root
+
     }
+
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(requireActivity(),
+                arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE), 1)
+        }
+
+
         linearLayoutManager =
             LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
         binding.recyclerView.layoutManager = linearLayoutManager
         adapter = AdminRecyclerAdapter(employeelist, this)
         binding.recyclerView.adapter = adapter
         getEmployee()
+        binding.pdffa.setOnClickListener {
+//            generatePdfFromRecyclerData()
+
+        }
         binding.btnFilter.setOnClickListener {
             PopupMenu(requireContext(), it).apply {
                 menuInflater.inflate(R.menu.popupmenu, menu)
                 gravity = Gravity.END
                 setOnMenuItemClickListener {
                     when (it.itemId) {
-                        R.id.filterIn ->showTimePickerDialog()
-                        R.id.filterEmployee -> searchSpecificEmployee()
+                        R.id.filterIn -> Toast.makeText(
+                            mainActivity,
+                            "third",
+                            Toast.LENGTH_SHORT
+                        )
+                            .show()
+
+                        R.id.filterEmployee ->searchEmployee()
 
 
                         R.id.filterShortleave -> Toast.makeText(
@@ -91,7 +128,12 @@ class AdminFragment : Fragment(),AdminIterface {
                         )
                             .show()
 
-                        R.id.filterOut -> showTimePickerDialog()
+                        R.id.filterOut -> Toast.makeText(
+                            mainActivity,
+                            "third",
+                            Toast.LENGTH_SHORT
+                        )
+                            .show()
                     }
 
                     return@setOnMenuItemClickListener true
@@ -123,13 +165,14 @@ class AdminFragment : Fragment(),AdminIterface {
                 }
             }
     }
-    private fun getEmployee(){
+
+    private fun getEmployee() {
         employeelist.clear()
         db.collection("employee").addSnapshotListener { snapshot, error ->
-            if (error != null){
+            if (error != null) {
                 return@addSnapshotListener
             }
-            for (dc in snapshot!!){
+            for (dc in snapshot!!) {
                 val firestoreClass = dc.toObject(EmployeeDataClass::class.java)
                 firestoreClass.id = dc.id
                 employeelist.add(firestoreClass)
@@ -137,162 +180,136 @@ class AdminFragment : Fragment(),AdminIterface {
             adapter.notifyDataSetChanged()
         }
     }
-    private fun searchSpecificEmployee() {
-        var dialog = Dialog(mainActivity)
-        var dialogBindinng = EmployefilterBinding.inflate(layoutInflater)
-        dialog.setContentView(dialogBindinng.root)
-        dialogBindinng.btnremarkadd.setOnClickListener {
-            if (dialogBindinng.etremark.text.isNullOrEmpty()){
-                Toast.makeText(mainActivity,"enter the employee name",Toast.LENGTH_SHORT).show()
+    private fun searchEmployee() {
+        val dialog = Dialog(mainActivity)
+        val dialogBinding = EmployefilterBinding.inflate(layoutInflater)
+        dialog.setContentView(dialogBinding.root)
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
 
-
-        }else{
-                updateUI(filterList)
-                adapter.notifyDataSetChanged()
-            dialog.dismiss()
-                filterEmployee()
-
-                Toast.makeText(mainActivity,"employee data get",Toast.LENGTH_SHORT).show()
+        dialogBinding.btnremarkadd.setOnClickListener {
+            val searchName = dialogBinding.etremark.text.toString().trim()
+            if (searchName.isEmpty()) {
+                Toast.makeText(mainActivity, "Please enter an employee name", Toast.LENGTH_SHORT)
+                    .show()
+            } else {
+                // Call the filter function
+                filterEmployee(searchName)
+                dialog.dismiss()
             }
-
         }
         dialog.show()
-
-//        val searchDialog = AlertDialog.Builder(requireContext())
-//        val input = EditText(requireContext())
-//        searchDialog.setTitle("Enter Employee Name")
-//        searchDialog.setView(input)
-//        searchDialog.setPositiveButton("Search") { _, _ ->
-//            filterEmp = input.text.toString().trim()
-//            if (filterEmp.isNullOrEmpty()){
-//            }else{
-//
-//            }
-//            if (nameQuery.isNotEmpty()) {
-//                db.collection("employee").get().addOnSuccessListener { snapshot ->
-//
-//                    for (document in snapshot.documents) {
-//                        val employee = document.toObject(EmployeeDataClass::class.java)
-//                        if (employee?.employeeName?.contains(
-//                                nameQuery,
-//                                ignoreCase = true
-//                            ) == true
-//                        ) {
-//                            employee.id = document.id
-//                            employeelist.add(employee)
-//                            Toast.makeText(mainActivity,"click",Toast.LENGTH_SHORT).show()
-//
-//                        }
-//
-//
-//
-//
-//                    }
-//                    adapter.notifyDataSetChanged()
-//
-//                }.addOnFailureListener { e ->
-//                    Log.e("Firestore", "Error searching employee", e)
-//                }
-//            } else {
-//                Toast.makeText(requireContext(), "Please enter a name", Toast.LENGTH_SHORT).show()
-//            }
-
-
-
-//        searchDialog.setNegativeButton("Cancel", null)
-//        searchDialog.show()
     }
-//    private fun showMarkedOutEmployees() {
-//        employeelist.clear() // Clear old data before updating
-//
-//        db.collection("employee")
-//            .whereEqualTo("time", true) // Get only marked-out employees
-//            .get()
-//            .addOnSuccessListener { snapshot ->
-//                for (document in snapshot.documents) {
-//                    val employee = document.toObject(EmployeeDataClass::class.java)
-//                    employee?.id = document.id
-//                    employeelist.add() // Add to existing ArrayList
-//                }
-//
-//                adapter.notifyDataSetChanged() // Update RecyclerView UI
-//            }
-//            .addOnFailureListener { e ->
-//                Log.e("Firestore", "Error fetching marked-out employees", e)
-//            }
-//    }
 
+    private fun filterEmployee(searchName: String) {
+        val formattedName = searchName.trim().lowercase() // Convert search query to lowercase
+        Log.d("Firestore", "Searching for employee: '$formattedName'")
 
-    private fun filterEmployee() {
-        employeelist.clear()
-        db.collection("employee").whereEqualTo("employeeName", filterEmp).get()
+        db.collection("markin")
+            .whereEqualTo("employeeName", formattedName) // Ensure Firestore data is also stored in lowercase
+            .get()
             .addOnSuccessListener { snapshot ->
-                for (document in snapshot!!) {
-                    val employee = document.toObject(EmployeeDataClass::class.java)
-                    employee?.id = document.id
-                    filterList.add(employee)
-                }
-            adapter.notifyDataSetChanged()
+                Log.d("Firestore", "Query size: ${snapshot.size()}")
 
-        }
+                if (!snapshot.isEmpty) {
+                    employeelist.clear()
+                    for (document in snapshot.documents) {
+                        val employee = document.toObject(EmployeeDataClass::class.java)
+                        Log.d("Firestore", "Employee Found: ${document.data}")
+                        employee?.id = document.id
+                        employeelist.add(employee!!)
+                    }
+                    adapter.notifyDataSetChanged()
+
+                    Toast.makeText(mainActivity, "${employeelist.size} employee(s) found", Toast.LENGTH_SHORT).show()
+                } else {
+                    Log.d("Firestore", "No employee found for '$formattedName'")
+                    Toast.makeText(mainActivity, "No employee found", Toast.LENGTH_SHORT).show()
+                }
+            }
             .addOnFailureListener { e ->
-                Log.e("Firestore", "Error fetching  employee", e)
+                Log.e("Firestore", "Error fetching data", e)
+                Toast.makeText(mainActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
 
-    fun updateUI(newlist: ArrayList<EmployeeDataClass>) {
-        employeelist.addAll(newlist)
-        adapter.notifyDataSetChanged()
+   
 
-    }
 
     override fun eyeclick(employeeDataClass: EmployeeDataClass, position: Int) {
-
+        TODO("Not yet implemented")
     }
-
-//    fun onclick(){
-//        var dialog = Dialog(this)
-//        dialog.setContentView(R.layout.itememployeelayout)
-//        dialog.getWindow()?.setLayout(
-//            ViewGroup.LayoutParams.MATCH_PARENT,
-//            ViewGroup.LayoutParams.WRAP_CONTENT
-//        )
+//    // Check for storage permissions
+//    private fun generatePdfFromRecyclerData() {
+//        val employeeList = adapter.employeeList // Assuming you have a method to get the list of employees from the adapter.
+//
+//        if (employeeList.isNotEmpty()) {
+//            generatePDF(employeeList)  // Pass the data to your PDF generation function.
+//        } else {
+//            Toast.makeText(requireContext(), "No employee data to generate PDF", Toast.LENGTH_SHORT).show()
+//        }
+//    }
+//
+//
+//    private fun generatePDF(employeeList: List<EmployeeDataClass>) {
+//        val document = PdfDocument()
+//        val paint = Paint()
+//
+//        // Set page attributes
+//        val pageInfo = PdfDocument.PageInfo.Builder(600, 800, 1).create()
+//        val page = document.startPage(pageInfo)
+//        val canvas: Canvas = page.canvas
+//
+//        // Set text properties
+//        paint.color = Color.BLACK
+//        paint.textSize = 12f
+//        var yPos = 20f
+//
+//        // Add content (employee data) to the PDF
+//        for (employee in employeeList) {
+//            canvas.drawText("Employee: ${employee.employeeName}", 50f, yPos, paint)
+//            yPos += 20f
+//            canvas.drawText("Mark In: ${employee.datein}", 50f, yPos, paint)
+//            yPos += 20f
+//            canvas.drawText("Mark Out: ${employee.dateout}", 50f, yPos, paint)
+//            yPos += 20f
+//            canvas.drawText("Short Leave: ${employee.shortLeave}", 50f, yPos, paint)
+//            yPos += 20f
+//            canvas.drawText("Remarks: ${employee.remarks}", 50f, yPos, paint)
+//            yPos += 40f // Add space for next employee
+//        }
+//
+//        // End the page
+//        document.finishPage(page)
+//
+//        // Get the app's specific external storage directory for PDFs
+//        val filePath = File(requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "Employee_Attendance.pdf")
+//
+//        try {
+//            // Write the document to the file
+//            val outputStream = FileOutputStream(filePath)
+//            document.writeTo(outputStream)
+//            outputStream.close()
+//
+//            // Notify the user that the PDF was saved successfully
+//            Toast.makeText(requireContext(), "PDF saved at ${filePath.path}", Toast.LENGTH_SHORT).show()
+//        } catch (e: IOException) {
+//            e.printStackTrace()
+//            Toast.makeText(requireContext(), "Error saving PDF", Toast.LENGTH_SHORT).show()
+//        }
+//
+//        // Close the document
+//        document.close()
 //
 //    }
-
-    private fun showTimePickerDialog() {
-        val builder = AlertDialog.Builder(requireContext())
-        builder.setTitle("Select Time")
-
-        // Get the current time
-        val calendar = Calendar.getInstance()
-        val hour = calendar.get(Calendar.HOUR_OF_DAY)
-        val minute = calendar.get(Calendar.MINUTE)
-
-        builder.setPositiveButton("Pick Time") { _, _ ->
-            // Open TimePicker when the user clicks "Pick Time"
-            val timePickerDialog = TimePickerDialog(requireContext(),
-                { _, selectedHour, selectedMinute ->
-                    // Convert to 12-hour format
-                    val amPm = if (selectedHour >= 12) "PM" else "AM"
-                    val hour12 = if (selectedHour % 12 == 0) 12 else selectedHour % 12
-                    val selectedTime = String.format("%02d:%02d %s", hour12, selectedMinute, amPm)
-
-                    Toast.makeText(requireContext(), "Selected Time: $selectedTime", Toast.LENGTH_SHORT).show()
-                }, hour, minute, false // false for 12-hour format (AM/PM)
-            )
-            timePickerDialog.show()
-        }
-
-        builder.setNegativeButton("Cancel") { dialog, _ ->
-            dialog.dismiss()
-        }
-
-        val dialog = builder.create()
-        dialog.show()
-    }
 
 
 }
+
+
+
+
 
 

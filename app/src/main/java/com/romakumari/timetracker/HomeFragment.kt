@@ -167,8 +167,8 @@ class HomeFragment : Fragment() {
          val currentTime =SimpleDateFormat("dd/MM/yyyy hh:mm:a").format(Calendar.getInstance().time)
             val currentLocation = getAddressFromLatLng(mainActivity, location.latitude, location.longitude)
 
-           db.collection("markIn").add(
-            EmployeeDataClass(date = currentTime, employeeName = name, location = currentLocation, markIn =true )
+           db.collection("markin").add(
+            EmployeeDataClass(datein = currentTime, employeeName = name, location = currentLocation, markIn =true )
            )
 
             .addOnSuccessListener {
@@ -206,10 +206,10 @@ class HomeFragment : Fragment() {
             if (location != null) {
                 val currentTimeDate =SimpleDateFormat("dd/MM/yyyy hh:mm:a").format(Calendar.getInstance().time)
                 val currentLocation = getAddressFromLatLng(mainActivity, location.latitude, location.longitude)
-                var markout=true
+
 
                 db.collection("markout").add(
-                    EmployeeDataClass(date = currentTimeDate, employeeName = name ,location = currentLocation, markOut =true)
+                    EmployeeDataClass(dateout = currentTimeDate, employeeName = name ,location = currentLocation, markOut =true)
 
                 )
 
@@ -259,7 +259,7 @@ class HomeFragment : Fragment() {
                     val remarks= dialogbinding.etremark.text.toString().trim()
                     db.collection("markshortleave").add(
                         EmployeeDataClass(
-                            date =currentdateTime,
+                            dateshortleave =currentdateTime,
                             employeeName = name,
                             location = currentLocation,
                             shortLeave = true,

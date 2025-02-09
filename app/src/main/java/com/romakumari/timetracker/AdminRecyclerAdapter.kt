@@ -17,25 +17,28 @@ class AdminRecyclerAdapter( val employeeList: List<EmployeeDataClass>, var admin
     RecyclerView.Adapter<AdminRecyclerAdapter.ViewHolder>() {
 
     class ViewHolder(var view: View) : RecyclerView.ViewHolder(view) {
-        var tvempname=view.findViewById<TextView>(R.id.employeename)
-        var tvoutdate=view.findViewById<TextView>(R.id.tvoutdate)
-        var  tvindate =view.findViewById<TextView>(R.id.tvindate)
-//        var btnremark=view.findViewById<ImageView>(R.id.btnremarkadd)
+        var tvempname=view.findViewById<TextView>(R.id.tvEmployeeName)
+        var tvoutdate=view.findViewById<TextView>(R.id.tvMarkInCount)
+        var  tvindate =view.findViewById<TextView>(R.id.tvMarkOutCount)
+        var btnremark=view.findViewById<ImageView>(R.id.ivViewRemark)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int
     ): AdminRecyclerAdapter.ViewHolder {
         var view=LayoutInflater.from(parent.context)
-            .inflate(R.layout.itemadminlayout,parent,false)
+            .inflate(R.layout.itememployeelayout,parent,false)
         return ViewHolder(view)
 
     }
 
     override fun onBindViewHolder(holder: AdminRecyclerAdapter.ViewHolder, position: Int) {
         holder.tvempname.setText(employeeList[position].employeeName)
-//         holder.tvindate.setText(employeeList[position].markIn)
-//         holder.tvoutdate.setText(employeeList[position].markOut)
-          adminIterface.eyeclick(employeeList[position],position)
+         holder.tvindate.setText(employeeList[position].datein)
+         holder.tvoutdate.setText(employeeList[position].dateout)
+         holder.btnremark.setOnClickListener {
+             adminIterface.eyeclick(employeeList[position], position)
+
+         }
     }
     override fun getItemCount(): Int {
         return employeeList.size
